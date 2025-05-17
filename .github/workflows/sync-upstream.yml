@@ -1,0 +1,48 @@
+name: Reusable Upstream Sync Workflow
+
+on:
+  workflow_call:
+    inputs:
+      upstream_url:
+        required: true
+        type: string
+      upstream_branch:
+        required: false
+        type: string
+        default: main
+      target_branch:
+        required: false
+        type: string
+        default: main
+    secrets:
+      GH_PAT:
+        required: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote add upstream ${{ inputs.upstream_url }}
+          git fetch upstream
+
+      - name: Merge from upstream
+        run: |
+          git checkout ${{ inputs.target_branch }}
+          git merge upstream/${{ inputs.upstream_branch }} --allow-unrelated-histories || true
+
+      - name: Push changes
+        run: |
+          git push origin ${{ inputs.target_branch }}
